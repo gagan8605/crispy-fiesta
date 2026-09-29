@@ -1,5 +1,7 @@
 import unittest
 import os
+import subprocess
+import sys
 from unittest.mock import MagicMock, patch
 from src.config import Config, str_to_bool
 from src.db_service import DatabaseService
@@ -62,6 +64,25 @@ class TestBackendOps(unittest.TestCase):
         self.assertIn("8.0.35-cloud", html)
         self.assertIn("Test Workflow", plain)
         self.assertIn("12.5 ms", plain)
+
+    def test_module_entrypoint_runs_in_dry_run(self):
+        env = os.environ.copy()
+        env["DRY_RUN"] = "true"
+        env["EMAIL_TO"] = ""
+        env["SMTP_HOST"] = ""
+        env["SMTP_USER"] = ""
+
+        result = subprocess.run(
+            [sys.executable, "-m", "src.main"],
+            cwd=os.path.dirname(os.path.dirname(__file__)),
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertNotIn("ModuleNotFoundError: No module named 'src'", result.stderr)
 
 
 if __name__ == "__main__":
